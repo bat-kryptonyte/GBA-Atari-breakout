@@ -33,7 +33,7 @@ int main(void) {
   enum gba_state state = START;
   int score = 0;
   int final_score;
-  int high_score;
+  int high_score = 0;
 
   
 

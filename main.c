@@ -12,6 +12,8 @@
 #include "images/start.h"
 #include "images/gradient.h"
 #include "images/target.h"
+#include "images/wasted.h"
+#include "images/win.h"
 /* TODO: */
 // Add any additional states you need for your app. You are not requried to use
 // these specific provided states.
@@ -30,6 +32,8 @@ int main(void) {
   // Load initial application state
   enum gba_state state = START;
   int score = 0;
+  int final_score;
+  int high_score;
 
   
 
@@ -43,15 +47,32 @@ int main(void) {
     switch (state) {
       case START:
         drawFullScreenImageDMA(start);
+        int col = 130;
+        int row = 95;
+        int speed = 2;
 
 
         while(1) {
-          drawString(130, 60, "PRESS UP TO START", WHITE);
+          delay(1);
+          drawRectDMA(row, col, 105, 10, BACKGROUND);
+          waitForVBlank();
+          col += speed;
+
+          if(col < 0) {
+              col = 0;
+              speed = - speed;
+          }
+          if(col > WIDTH - 105) {
+              col = WIDTH - 105;
+              speed = -speed;
+          }
+          drawString(row, col, "PRESS UP TO START", WHITE);
           if (KEY_DOWN(BUTTON_UP, BUTTONS)) {
             drawRectDMA(0,0,WIDTH,HEIGHT,BLACK);
             state = PLAY;
             break;
           }
+
 
         }
 
@@ -61,6 +82,8 @@ int main(void) {
       case PLAY:;
         score = 0;
         char result[30];
+        int player_velocity = 3;
+        int ball_velocity = 2;
 
         struct target_state cts, pts;
         struct g_target *tp, *otp;
@@ -78,8 +101,8 @@ int main(void) {
         bp = &cs.balls;
         bp->row = 80;
         bp->col = 120;
-        bp->rd = 2;
-        bp->cd = 2;
+        bp->cd = ball_velocity;
+        bp->rd = ball_velocity;
         bp->color = WHITE;
 
 
@@ -90,37 +113,69 @@ int main(void) {
         rp = &crs.players;
         rp -> row = 120;
         rp -> col = 120;
-        rp -> rd = 3;
-        rp -> cd = 3;
+        rp -> cd = player_velocity;
+        rp -> rd = player_velocity;
           // Run forever (or until the power runs out)
         
           while (1) {
+
+            if (KEY_DOWN(BUTTON_SELECT, BUTTONS)) {
+              state = START;
+              break;
+              
+            }
             //score
             drawString(140, 10, "SCORE: ", WHITE);
             sprintf(result, "%d", score);
             drawRectDMA(140, 50, 20, 20, BLACK);
             drawString(140, 50, result, WHITE); 
+            if (score == NUM_TILES) {
+              final_score = score;
+              high_score = 0;
+              if (high_score > final_score) {
+                high_score = final_score;
+              }
+              state = WIN;
+              break;
+            }
+
+            //change ball velocity depending on number of tiles left:
+              if (score > 10 && score < 20) {
+                ball_velocity = 3;
+                player_velocity = 5;
+              }
+              if (score >= 20) {
+                ball_velocity = 4;
+                player_velocity = 7;
+              }
+
+
 
             //tiles
               pts = cts;
               int row_disp = 0;
-              int col_disp = 0;
+              int col_disp = 3;
               for (int i = 0; i < NUM_TILES; i++) {
-                if (col_disp > 200) {
-                  col_disp = 23;
-                  row_disp += 20;
-                } else {
-                 col_disp += 23;
 
-                }
                 cts.targets[i].row = 10 + row_disp;
                 cts.targets[i].col = col_disp;
                 cts.targets[i].width = 20;
                 cts.targets[i].height = 10;
+                if (col_disp > 200) {
+                  col_disp = 3;
+                  row_disp += 20;
+                } else {
+                 col_disp += 21;
+
+                }
               }
+              
           // See if we need to bounce off a wall
               ps = cs;
               bp = &cs.balls;
+              bp->cd = ball_velocity * (bp->cd < 0 ? -1 : 1);
+              bp->rd = ball_velocity * (bp->rd < 0 ? -1 : 1);
+              rp->cd = player_velocity;
               bp->row = bp->row + bp->rd;
               bp->col += bp->cd;
               if(bp->row < 0) {
@@ -128,8 +183,11 @@ int main(void) {
                 bp->rd = -bp->rd;
               }
               if(bp->row > HEIGHT - 5) {
-                bp->row = HEIGHT - 5;
-                bp->rd = -bp->rd;
+                // bp->row = HEIGHT - 5;
+                // bp->rd = -bp->rd;
+                state = LOSE;
+                final_score = score;
+                break;
               }
               if(bp->col < 0) {
                 bp->col = 0;
@@ -158,8 +216,8 @@ int main(void) {
               rp = &crs.players;
               if (KEY_DOWN(BUTTON_LEFT, BUTTONS)) {
 
-                if (rp->col < 0) {
-                  rp->col = 0;
+                if (rp->col < 5) {
+                  rp->col = 5;
                 }
                 rp->col = rp->col - rp->cd;
               }
@@ -209,9 +267,64 @@ int main(void) {
         break;
       case WIN:
 
+        drawFullScreenImageDMA(win);
+        final_score = score;
+
+        if (final_score > high_score) {
+            high_score = final_score;
+        }
+
+        char result3[30];
+        char result4[30];
+        while(1) {
+
+          drawString(10, 10, "PRESS BACKSPACE TO START AGAIN", WHITE);
+
+          drawString(140, 10, "YOUR SCORE: ", WHITE);
+          sprintf(result3, "%d", final_score);
+          drawString(140, 80, result3, WHITE); 
+          drawString(150, 10, "HIGH SCORE: ", WHITE);
+          sprintf(result4, "%d", high_score);
+          drawString(150, 80, result4, WHITE); 
+
+
+          if (KEY_DOWN(BUTTON_SELECT, BUTTONS)) {
+            state = START;
+            break;
+          }
+
+        }
+
         // state = ?
+
         break;
       case LOSE:
+        drawFullScreenImageDMA(wasted);
+        final_score = score;
+
+        if (final_score > high_score) {
+            high_score = final_score;
+        }
+
+        char result1[30];
+        char result2[30];
+        while(1) {
+          drawString(10, 10, "PRESS BACKSPACE TO START AGAIN", WHITE);
+
+          drawString(140, 10, "YOUR SCORE: ", WHITE);
+          sprintf(result1, "%d", final_score);
+          drawString(140, 80, result1, WHITE); 
+          drawString(150, 10, "HIGH SCORE: ", WHITE);
+          sprintf(result2, "%d", high_score);
+          drawString(150, 80, result2, WHITE); 
+
+
+          if (KEY_DOWN(BUTTON_SELECT, BUTTONS)) {
+            state = START;
+            break;
+          }
+
+        }
 
         // state = ?
         break;

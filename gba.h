@@ -31,6 +31,7 @@ typedef unsigned char u8;
 #define CYAN COLOR(0, 31, 31)
 #define YELLOW COLOR(31, 31, 0)
 #define BLACK COLOR(0, 0, 0)
+#define BACKGROUND COLOR(1, 2, 3)
 #define GRAY COLOR(5, 5, 5)
 
 // The size of the GBA Screen

@@ -23,7 +23,7 @@
 * };
 *
 */
-#define NUM_TILES 27
+#define NUM_TILES 33
 
 enum gba_state {
   START, 
